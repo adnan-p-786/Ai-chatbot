@@ -1,11 +1,10 @@
-
 const Header = () => {
   return (
-    <header className="w-full h-16 bg-slate-900 text-white border-b border-slate-800 px-6 flex items-center justify-between shadow-md">
+    <header className="w-full h-16 bg-slate-900 text-white border-b border-slate-800 px-6 flex items-center justify-center shadow-md">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+        <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-blue-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
           <svg
-            className="w-6 h-6 text-white"
+            className="w-5 h-5 text-white"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -23,7 +22,7 @@ const Header = () => {
         </h1>
       </div>
     </header>
-  )
-}
+  );
+};
 
-export default Header
+export default Header;
