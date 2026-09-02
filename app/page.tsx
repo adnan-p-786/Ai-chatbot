@@ -26,18 +26,7 @@ export default function Home() {
     setInput("");
     await sendMessage(trimmed);
   };
-
-  const handleSuggestionClick = async (promptText: string) => {
-    if (isLoading) return;
-    setInput("");
-    await sendMessage(promptText);
-  };
-
-  const suggestions = [
-    { title: "Explain React 19", desc: "Key features & improvements" },
-    { title: "Write a API Route", desc: "Next.js App Router POST handler" },
-    { title: "Code Refactoring", desc: "Tips for cleaner TypeScript" },
-  ];
+  
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] max-w-4xl mx-auto w-full px-4 py-6">
@@ -46,7 +35,7 @@ export default function Home() {
         {messages.length === 0 ? (
           /* Welcome Banner & Starter Suggestions */
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-center my-auto space-y-6">
-            <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 border border-indigo-400/30 animate-pulse">
+            <div className="w-16 h-16 rounded-3xl bg-linear-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 border border-indigo-400/30 animate-pulse">
               <svg
                 className="w-8 h-8 text-white"
                 fill="none"
@@ -68,24 +57,6 @@ export default function Home() {
               <p className="text-sm text-slate-400">
                 Ask a question, brainstorm ideas, or generate code snippets.
               </p>
-            </div>
-
-            {/* Quick Suggestions */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-xl pt-4">
-              {suggestions.map((s, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleSuggestionClick(s.title)}
-                  className="flex flex-col text-left p-4 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-900 transition-all cursor-pointer group"
-                >
-                  <span className="text-xs font-semibold text-slate-200 group-hover:text-indigo-400 transition-colors">
-                    {s.title}
-                  </span>
-                  <span className="text-[11px] text-slate-500 mt-1 line-clamp-2">
-                    {s.desc}
-                  </span>
-                </button>
-              ))}
             </div>
           </div>
         ) : (
@@ -118,7 +89,7 @@ export default function Home() {
                         return (
                           <div
                             key={idx}
-                            className="whitespace-pre-wrap leading-relaxed break-words"
+                            className="whitespace-pre-wrap leading-relaxed wrap-break-words"
                           >
                             {part.content}
                           </div>
@@ -127,7 +98,7 @@ export default function Home() {
                       return null;
                     })
                   ) : (
-                    <div className="whitespace-pre-wrap leading-relaxed break-words">
+                    <div className="whitespace-pre-wrap leading-relaxed wrap-break-words">
                       {(message as any).content}
                     </div>
                   )}
@@ -195,7 +166,7 @@ export default function Home() {
           onChange={(e) => setInput(e.target.value)}
           placeholder="Type a message..."
           disabled={isLoading}
-          className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
+          className="flex-1 bg-slate-900 border 'focus:border-indigo-500 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
         />
         {isLoading ? (
           <button
