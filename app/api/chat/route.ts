@@ -1,8 +1,4 @@
-import {
-  chat,
-  chatParamsFromRequest,
-  toServerSentEventsResponse,
-} from "@tanstack/ai";
+import {chat,chatParamsFromRequest,toServerSentEventsResponse} from "@tanstack/ai";
 
 import { openRouterText } from "@tanstack/ai-openrouter";
 

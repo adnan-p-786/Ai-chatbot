@@ -1,7 +1,16 @@
 "use client";
 
 import React, { useState } from "react";
-import { ChatSession, DateGroupedSessions } from "@/lib/types";
+import {
+  MessageSquare,
+  X,
+  Trash2,
+  Plus,
+  ChevronLeft,
+  Search,
+  MessageSquarePlus,
+} from "lucide-react";
+import { ChatSession } from "@/lib/types";
 import { groupSessionsByDate } from "@/lib/chat-storage";
 
 interface ChatSidebarProps {
@@ -10,7 +19,7 @@ interface ChatSidebarProps {
   onSelectSession: (id: string) => void;
   onNewChat: () => void;
   onDeleteSession: (id: string) => void;
-  onRenameSession: (id: string, newTitle: string) => void;
+  onRenameSession?: (id: string, newTitle: string) => void;
   onClearAllSessions: () => void;
   isOpen: boolean;
   onToggleOpen: () => void;
@@ -24,7 +33,6 @@ export default function ChatSidebar({
   onSelectSession,
   onNewChat,
   onDeleteSession,
-  onRenameSession,
   onClearAllSessions,
   isOpen,
   onToggleOpen,
@@ -32,31 +40,10 @@ export default function ChatSidebar({
   onCloseMobile,
 }: ChatSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingTitle, setEditingTitle] = useState("");
   const [confirmClearAll, setConfirmClearAll] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const groupedSessions = groupSessionsByDate(sessions, searchQuery);
-
-  const handleStartRename = (session: ChatSession, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingId(session.id);
-    setEditingTitle(session.title);
-  };
-
-  const handleSaveRename = (id: string, e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (editingTitle.trim()) {
-      onRenameSession(id, editingTitle.trim());
-    }
-    setEditingId(null);
-  };
-
-  const handleCancelRename = (e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    setEditingId(null);
-  };
 
   const handleDeleteClick = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -82,17 +69,14 @@ export default function ChatSidebar({
         <div className="space-y-1">
           {groupList.map((session) => {
             const isActive = session.id === activeSessionId;
-            const isEditing = session.id === editingId;
             const isPendingDelete = session.id === deletingId;
 
             return (
               <div
                 key={session.id}
                 onClick={() => {
-                  if (!isEditing) {
-                    onSelectSession(session.id);
-                    onCloseMobile();
-                  }
+                  onSelectSession(session.id);
+                  onCloseMobile();
                 }}
                 className={`group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-sm transition-all cursor-pointer select-none ${
                   isActive
@@ -107,108 +91,31 @@ export default function ChatSidebar({
 
                 {/* Left side: Icon and title */}
                 <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-1">
-                  <svg
+                  <MessageSquare
                     className={`w-4 h-4 shrink-0 transition-colors ${
                       isActive ? "text-indigo-400" : "text-slate-400 group-hover:text-slate-300"
                     }`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                    />
-                  </svg>
-
-                  {isEditing ? (
-                    <form
-                      onSubmit={(e) => handleSaveRename(session.id, e)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex items-center gap-1 flex-1"
-                    >
-                      <input
-                        type="text"
-                        autoFocus
-                        value={editingTitle}
-                        onChange={(e) => setEditingTitle(e.target.value)}
-                        className="w-full bg-slate-950 text-white text-xs px-2 py-1 rounded border border-indigo-500 focus:outline-none"
-                      />
-                      <button
-                        type="submit"
-                        title="Save"
-                        className="text-emerald-400 hover:text-emerald-300 p-1"
-                      >
-                        ✓
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleCancelRename}
-                        title="Cancel"
-                        className="text-slate-400 hover:text-slate-200 p-1"
-                      >
-                        ✕
-                      </button>
-                    </form>
-                  ) : (
-                    <span className="truncate text-xs tracking-tight" title={session.title}>
-                      {session.title || "Untitled Chat"}
-                    </span>
-                  )}
+                  />
+                  <span className="truncate text-xs tracking-tight" title={session.title}>
+                    {session.title || "Untitled Chat"}
+                  </span>
                 </div>
 
-                {/* Right side: Action icons (Rename & Delete) */}
-                {!isEditing && (
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      type="button"
-                      onClick={(e) => handleStartRename(session, e)}
-                      title="Rename chat"
-                      className="p-1 rounded text-slate-400 hover:text-indigo-300 hover:bg-slate-700/60 transition-colors"
-                    >
-                      <svg
-                        className="w-3.5 h-3.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                        />
-                      </svg>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={(e) => handleDeleteClick(session.id, e)}
-                      title={isPendingDelete ? "Click again to confirm delete" : "Delete chat"}
-                      className={`p-1 rounded transition-colors ${
-                        isPendingDelete
-                          ? "text-red-400 bg-red-950/60 ring-1 ring-red-500 animate-pulse"
-                          : "text-slate-400 hover:text-red-400 hover:bg-slate-700/60"
-                      }`}
-                    >
-                      <svg
-                        className="w-3.5 h-3.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                )}
+                {/* Right side: Action icon (Delete) */}
+                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteClick(session.id, e)}
+                    title={isPendingDelete ? "Click again to confirm delete" : "Delete chat"}
+                    className={`p-1 rounded transition-colors cursor-pointer ${
+                      isPendingDelete
+                        ? "text-red-400 bg-red-950/60 ring-1 ring-red-500 animate-pulse"
+                        : "text-slate-400 hover:text-red-400 hover:bg-slate-700/60"
+                    }`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -236,15 +143,7 @@ export default function ChatSidebar({
           }}
           className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium text-xs py-2.5 px-3 rounded-xl shadow-md shadow-indigo-500/15 transition-all cursor-pointer active:scale-[0.98]"
         >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2.5}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
+          <Plus className="w-4 h-4" />
           <span>New Chat</span>
         </button>
 
@@ -255,19 +154,7 @@ export default function ChatSidebar({
           title="Collapse sidebar"
           className="hidden md:flex p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
         >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-            />
-          </svg>
+          <ChevronLeft className="w-4 h-4" />
         </button>
 
         {/* Mobile Close Button */}
@@ -277,15 +164,7 @@ export default function ChatSidebar({
           title="Close sidebar"
           className="md:hidden p-2 text-slate-400 hover:text-white hover:bg-slate-850 rounded-xl transition-colors cursor-pointer"
         >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <X className="w-5 h-5" />
         </button>
       </div>
 
@@ -293,19 +172,7 @@ export default function ChatSidebar({
       {hasAnySessions && (
         <div className="px-3 pt-3 pb-2">
           <div className="relative">
-            <svg
-              className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
+            <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search chats..."
@@ -317,9 +184,9 @@ export default function ChatSidebar({
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs cursor-pointer"
               >
-                ✕
+                <X className="w-3 h-3" />
               </button>
             )}
           </div>
@@ -331,14 +198,7 @@ export default function ChatSidebar({
         {!hasAnySessions ? (
           <div className="flex flex-col items-center justify-center h-48 text-center px-4">
             <div className="w-10 h-10 rounded-xl bg-slate-800/80 flex items-center justify-center text-slate-500 mb-2">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                />
-              </svg>
+              <MessageSquarePlus className="w-5 h-5" />
             </div>
             <p className="text-xs font-medium text-slate-400">No chat history</p>
             <p className="text-[11px] text-slate-400 mt-0.5">
@@ -374,14 +234,14 @@ export default function ChatSidebar({
                   onClearAllSessions();
                   setConfirmClearAll(false);
                 }}
-                className="text-red-400 hover:text-red-300 font-medium text-[11px] px-1.5 py-0.5 rounded bg-red-950/50 border border-red-800/60"
+                className="text-red-400 hover:text-red-300 font-medium text-[11px] px-1.5 py-0.5 rounded bg-red-950/50 border border-red-800/60 cursor-pointer"
               >
                 Confirm
               </button>
               <button
                 type="button"
                 onClick={() => setConfirmClearAll(false)}
-                className="text-slate-400 hover:text-slate-200 text-[11px]"
+                className="text-slate-400 hover:text-slate-200 text-[11px] cursor-pointer"
               >
                 Cancel
               </button>
@@ -391,21 +251,9 @@ export default function ChatSidebar({
               type="button"
               onClick={() => setConfirmClearAll(true)}
               title="Clear all chat history"
-              className="text-slate-400 hover:text-red-400 transition-colors flex items-center gap-1"
+              className="text-slate-400 hover:text-red-400 transition-colors flex items-center gap-1 cursor-pointer"
             >
-              <svg
-                className="w-3 h-3"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
+              <Trash2 className="w-3 h-3" />
               <span>Clear history</span>
             </button>
           )}

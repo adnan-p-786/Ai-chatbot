@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ChatSession } from "@/lib/types";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,4 +33,11 @@ export default function RootLayout({
       </body>
     </html>
   );
+}
+export interface ChatContainerProps {
+  session: ChatSession;
+  onUpdateMessages: (sessionId: string, messages: any[]) => void;
+  onFirstUserMessage: (sessionId: string, promptText: string) => void;
+  onToggleSidebar?: () => void;
+  isSidebarOpen?: boolean;
 }

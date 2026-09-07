@@ -1,6 +1,16 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import {
+  Sparkles,
+  Bot,
+  User,
+  Check,
+  Copy,
+  AlertTriangle,
+  Square,
+  Send,
+} from "lucide-react";
 import { useChat, fetchServerSentEvents } from "@tanstack/ai-react";
 import { ChatSession } from "@/lib/types";
 
@@ -35,8 +45,6 @@ export default function ChatContainer({
   session,
   onUpdateMessages,
   onFirstUserMessage,
-  onToggleSidebar,
-  isSidebarOpen,
 }: ChatContainerProps) {
   const [input, setInput] = useState("");
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
@@ -108,19 +116,7 @@ export default function ChatContainer({
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-center my-auto space-y-8 px-2">
             <div className="flex flex-col items-center space-y-4">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 border border-indigo-400/30 animate-pulse">
-                <svg
-                  className="w-7 h-7 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"
-                  />
-                </svg>
+                <Sparkles className="w-7 h-7 text-white" />
               </div>
               <div className="space-y-1.5 max-w-md">
                 <h2 className="text-2xl font-bold text-slate-100 tracking-tight">
@@ -166,7 +162,7 @@ export default function ChatContainer({
               >
                 {!isUser && (
                   <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-1 shadow-xs shadow-indigo-500/20">
-                    AI
+                    <Bot className="w-4 h-4" />
                   </div>
                 )}
 
@@ -205,41 +201,17 @@ export default function ChatContainer({
                       <button
                         type="button"
                         onClick={() => copyToClipboard(fullContent, index)}
-                        className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-300 transition-colors p-1 rounded hover:bg-slate-800/60"
+                        className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-300 transition-colors p-1 rounded hover:bg-slate-800/60 cursor-pointer"
                         title="Copy message"
                       >
                         {copiedIndex === index ? (
                           <>
-                            <svg
-                              className="w-3.5 h-3.5 text-emerald-400"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth={2}
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
                             <span className="text-emerald-400">Copied!</span>
                           </>
                         ) : (
                           <>
-                            <svg
-                              className="w-3.5 h-3.5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth={2}
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                              />
-                            </svg>
+                            <Copy className="w-3.5 h-3.5" />
                             <span>Copy</span>
                           </>
                         )}
@@ -250,7 +222,7 @@ export default function ChatContainer({
 
                 {isUser && (
                   <div className="w-8 h-8 rounded-xl bg-slate-800 text-slate-300 border border-slate-700 flex items-center justify-center font-bold text-xs shrink-0 mt-1">
-                    You
+                    <User className="w-4 h-4" />
                   </div>
                 )}
               </div>
@@ -262,7 +234,7 @@ export default function ChatContainer({
         {isLoading && (
           <div className="flex gap-3 justify-start items-center">
             <div className="w-8 h-8 rounded-xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold text-xs shrink-0">
-              AI
+              <Bot className="w-4 h-4" />
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-2xl rounded-tl-xs px-4 py-3 text-sm text-slate-400 flex items-center gap-2 shadow-xs">
               <span className="flex space-x-1">
@@ -280,19 +252,7 @@ export default function ChatContainer({
         {/* Error Notification */}
         {error && (
           <div className="p-3 bg-red-950/40 border border-red-800/50 rounded-xl text-red-300 text-xs flex items-center gap-2">
-            <svg
-              className="w-4 h-4 text-red-400 shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
+            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
             <span>
               {error.message || "An error occurred during chat response."}
             </span>
@@ -318,9 +278,7 @@ export default function ChatContainer({
             onClick={stop}
             className="bg-red-600/85 hover:bg-red-600 text-white font-medium px-4 py-3 rounded-xl text-sm transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
           >
-            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-              <rect x="6" y="6" width="12" height="12" rx="2" />
-            </svg>
+            <Square className="w-3.5 h-3.5 fill-current" />
             <span>Stop</span>
           </button>
         ) : (
@@ -330,19 +288,7 @@ export default function ChatContainer({
             className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-850 disabled:text-slate-500 text-white font-medium px-5 py-3 rounded-xl text-sm transition-all shadow-md shadow-indigo-600/20 cursor-pointer disabled:cursor-not-allowed flex items-center gap-1.5 disabled:shadow-none"
           >
             <span>Send</span>
-            <svg
-              className="w-4 h-4 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 12L3 21l18-9L3 3l3 9zm0 0h75"
-              />
-            </svg>
+            <Send className="w-4 h-4 text-white" />
           </button>
         )}
       </form>
