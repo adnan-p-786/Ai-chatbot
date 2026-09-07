@@ -1,207 +1,214 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
-import { useChat, fetchServerSentEvents } from "@tanstack/ai-react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import Header from "./components/header/Header";
+import ChatSidebar from "./components/sidebar/ChatSidebar";
+import ChatContainer from "./components/chat/ChatContainer";
+import { ChatSession } from "@/lib/types";
+import {
+  getStoredSessions,
+  saveStoredSessions,
+  getActiveSessionId,
+  setActiveSessionId,
+  createNewSession,
+  deleteSessionFromStorage,
+  updateSessionInStorage,
+  clearAllSessionsFromStorage,
+} from "@/lib/chat-storage";
 
 export default function Home() {
-  const [input, setInput] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionIdState] = useState<string | null>(
+    null,
+  );
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const { messages, sendMessage, isLoading, stop, error } = useChat({
-    connection: fetchServerSentEvents("/api/chat"),
-  });
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  // Initialize sessions from localStorage on client mount
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isLoading]);
+    const loadedSessions = getStoredSessions();
+    const storedActiveId = getActiveSessionId();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = input.trim();
-    if (!trimmed || isLoading) return;
-    setInput("");
-    await sendMessage(trimmed);
-  };
-  
+    if (loadedSessions.length > 0) {
+      setSessions(loadedSessions);
+      const matched = loadedSessions.find((s) => s.id === storedActiveId);
+      const activeId = matched ? matched.id : loadedSessions[0].id;
+      setActiveSessionIdState(activeId);
+      setActiveSessionId(activeId);
+    } else {
+      // First time visit: create a default session
+      const defaultSession = createNewSession("New Chat");
+      setSessions([defaultSession]);
+      setActiveSessionIdState(defaultSession.id);
+      saveStoredSessions([defaultSession]);
+      setActiveSessionId(defaultSession.id);
+    }
+    setIsInitialized(true);
+  }, []);
+
+  const activeSession = useMemo(() => {
+    return sessions.find((s) => s.id === activeSessionId) || null;
+  }, [sessions, activeSessionId]);
+
+  const handleSelectSession = useCallback((id: string) => {
+    setActiveSessionIdState(id);
+    setActiveSessionId(id);
+  }, []);
+
+  const handleNewChat = useCallback(() => {
+    // If current session is already completely empty and titled "New Chat", reuse it
+    if (
+      activeSession &&
+      activeSession.title === "New Chat" &&
+      activeSession.messages.length === 0
+    ) {
+      return;
+    }
+
+    const newSession = createNewSession("New Chat");
+    setSessions((prev) => {
+      const updated = [newSession, ...prev];
+      saveStoredSessions(updated);
+      return updated;
+    });
+    setActiveSessionIdState(newSession.id);
+    setActiveSessionId(newSession.id);
+  }, [activeSession]);
+
+  const handleDeleteSession = useCallback(
+    (id: string) => {
+      const updated = deleteSessionFromStorage(id);
+      setSessions(updated);
+
+      if (id === activeSessionId) {
+        if (updated.length > 0) {
+          setActiveSessionIdState(updated[0].id);
+          setActiveSessionId(updated[0].id);
+        } else {
+          // If all chats deleted, create a fresh empty one
+          const fresh = createNewSession("New Chat");
+          setSessions([fresh]);
+          setActiveSessionIdState(fresh.id);
+          saveStoredSessions([fresh]);
+          setActiveSessionId(fresh.id);
+        }
+      }
+    },
+    [activeSessionId],
+  );
+
+  const handleRenameSession = useCallback((id: string, newTitle: string) => {
+    const updated = updateSessionInStorage(id, { title: newTitle });
+    setSessions(updated);
+  }, []);
+
+  const handleClearAllSessions = useCallback(() => {
+    clearAllSessionsFromStorage();
+    const fresh = createNewSession("New Chat");
+    setSessions([fresh]);
+    setActiveSessionIdState(fresh.id);
+    saveStoredSessions([fresh]);
+    setActiveSessionId(fresh.id);
+  }, []);
+
+  const handleUpdateMessages = useCallback(
+    (sessionId: string, messages: any[]) => {
+      setSessions((prev) => {
+        const index = prev.findIndex((s) => s.id === sessionId);
+        if (index === -1) return prev;
+        if (prev[index].messages === messages) return prev;
+
+        const updated = [...prev];
+        updated[index] = {
+          ...updated[index],
+          messages,
+          updatedAt: Date.now(),
+        };
+        saveStoredSessions(updated);
+        return updated;
+      });
+    },
+    [],
+  );
+
+  const handleFirstUserMessage = useCallback(
+    (sessionId: string, promptText: string) => {
+      setSessions((prev) => {
+        const index = prev.findIndex((s) => s.id === sessionId);
+        if (index === -1) return prev;
+
+        const cleanPrompt = promptText.replace(/\s+/g, " ").trim();
+        const smartTitle =
+          cleanPrompt.length > 35
+            ? cleanPrompt.substring(0, 35) + "..."
+            : cleanPrompt;
+
+        const updated = [...prev];
+        updated[index] = {
+          ...updated[index],
+          title: smartTitle,
+          updatedAt: Date.now(),
+        };
+        saveStoredSessions(updated);
+        return updated;
+      });
+    },
+    [],
+  );
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] max-w-4xl mx-auto w-full px-4 py-6">
-      {/* Chat Messages Area */}
-      <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
-        {messages.length === 0 ? (
-          /* Welcome Banner & Starter Suggestions */
-          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center my-auto space-y-6">
-            <div className="w-16 h-16 rounded-3xl bg-linear-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 border border-indigo-400/30 animate-pulse">
-              <svg
-                className="w-8 h-8 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"
-                />
-              </svg>
-            </div>
-            <div className="space-y-2 max-w-md">
-              <h2 className="text-2xl font-bold text-slate-100 tracking-tight">
-                How can I help you today?
-              </h2>
-              <p className="text-sm text-slate-400">
-                Ask a question, brainstorm ideas, or generate code snippets.
-              </p>
-            </div>
-          </div>
-        ) : (
-          /* Message List */
-          messages.map((message) => {
-            const isUser = message.role === "user";
-            return (
-              <div
-                key={message.id}
-                className={`flex gap-3 ${
-                  isUser ? "justify-end" : "justify-start"
-                }`}
-              >
-                {!isUser && (
-                  <div className="w-8 h-8 rounded-lg bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold text-xs shrink-0 mt-1">
-                    AI
-                  </div>
-                )}
+    <div className="flex flex-col h-screen w-full bg-slate-950 overflow-hidden">
+      {/* Top Navigation Header */}
+      <Header
+        onToggleSidebar={() => {
+          setIsSidebarOpen((prev) => !prev);
+          setIsMobileSidebarOpen((prev) => !prev);
+        }}
+        onNewChat={handleNewChat}
+        activeTitle={activeSession?.title}
+        isSidebarOpen={isSidebarOpen}
+      />
 
-                <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm shadow-md ${
-                    isUser
-                      ? "bg-indigo-600 text-white rounded-tr-xs"
-                      : "bg-slate-900 border border-slate-800 text-slate-200 rounded-tl-xs"
-                  }`}
-                >
-                  {message.parts && message.parts.length > 0 ? (
-                    message.parts.map((part, idx) => {
-                      if (part.type === "text") {
-                        return (
-                          <div
-                            key={idx}
-                            className="whitespace-pre-wrap leading-relaxed wrap-break-words"
-                          >
-                            {part.content}
-                          </div>
-                        );
-                      }
-                      return null;
-                    })
-                  ) : (
-                    <div className="whitespace-pre-wrap leading-relaxed wrap-break-words">
-                      {(message as any).content}
-                    </div>
-                  )}
-                </div>
-
-                {isUser && (
-                  <div className="w-8 h-8 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 flex items-center justify-center font-bold text-xs shrink-0 mt-1">
-                    You
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-
-        {/* Loading Indicator */}
-        {isLoading && (
-          <div className="flex gap-3 justify-start items-center">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold text-xs shrink-0">
-              AI
-            </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl rounded-tl-xs px-4 py-3 text-sm text-slate-400 flex items-center gap-2 shadow-sm">
-              <span className="flex space-x-1">
-                <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></span>
-              </span>
-              <span className="text-xs text-slate-400 font-medium">
-                Thinking...
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Error Notification */}
-        {error && (
-          <div className="p-3 bg-red-950/40 border border-red-800/50 rounded-xl text-red-300 text-xs flex items-center gap-2">
-            <svg
-              className="w-4 h-4 text-red-400 shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            <span>
-              {error.message || "An error occurred during chat response."}
-            </span>
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input Bar */}
-      <form onSubmit={handleSubmit} className="mt-4 flex gap-2 items-center">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type a message..."
-          disabled={isLoading}
-          className="flex-1 bg-slate-900 border 'focus:border-indigo-500 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
+      {/* Main App Body: Sidebar + Chat Area */}
+      <div className="flex flex-1 min-h-0 overflow-hidden relative">
+        <ChatSidebar
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          onSelectSession={handleSelectSession}
+          onNewChat={handleNewChat}
+          onDeleteSession={handleDeleteSession}
+          onRenameSession={handleRenameSession}
+          onClearAllSessions={handleClearAllSessions}
+          isOpen={isSidebarOpen}
+          onToggleOpen={() => setIsSidebarOpen((prev) => !prev)}
+          isMobileOpen={isMobileSidebarOpen}
+          onCloseMobile={() => setIsMobileSidebarOpen(false)}
         />
-        {isLoading ? (
-          <button
-            type="button"
-            onClick={stop}
-            className="bg-red-600/80 hover:bg-red-600 text-white font-medium px-4 py-3 rounded-xl text-sm transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
-          >
-            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-              <rect x="6" y="6" width="12" height="12" rx="2" />
-            </svg>
-            Stop
-          </button>
-        ) : (
-          <button
-            type="submit"
-            disabled={!input.trim()}
-            className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-medium px-5 py-3 rounded-xl text-sm transition-colors shadow-sm cursor-pointer disabled:cursor-not-allowed flex items-center gap-1.5"
-          >
-            <span>Send</span>
-            <svg
-              className="w-4 h-4 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 12L3 21l18-9L3 3l3 9zm0 0h75"
-              />
-            </svg>
-          </button>
-        )}
-      </form>
+
+        {/* Chat Messages Workspace */}
+        <main className="flex-1 flex flex-col min-w-0 bg-slate-950 overflow-hidden relative">
+          {!isInitialized || !activeSession ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+                <span className="text-xs text-slate-400">
+                  Loading conversation...
+                </span>
+              </div>
+            </div>
+          ) : (
+            <ChatContainer
+              key={activeSession.id}
+              session={activeSession}
+              onUpdateMessages={handleUpdateMessages}
+              onFirstUserMessage={handleFirstUserMessage}
+              onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+              isSidebarOpen={isSidebarOpen}
+            />
+          )}
+        </main>
+      </div>
     </div>
   );
 }
