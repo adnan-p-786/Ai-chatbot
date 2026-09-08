@@ -141,7 +141,7 @@ export default function ChatSidebar({
             onNewChat();
             onCloseMobile();
           }}
-          className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium text-xs py-2.5 px-3 rounded-xl shadow-md shadow-indigo-500/15 transition-all cursor-pointer active:scale-[0.98]"
+          className="flex-1 flex items-center justify-center gap-2 bg-linear-to-tr from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium text-xs py-2.5 px-3 rounded-xl shadow-md shadow-indigo-500/15 transition-all cursor-pointer active:scale-[0.98]"
         >
           <Plus className="w-4 h-4" />
           <span>New Chat</span>

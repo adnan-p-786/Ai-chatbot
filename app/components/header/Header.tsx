@@ -27,10 +27,10 @@ export default function Header({
         </button>
 
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-md shadow-indigo-500/25">
+          <div className="w-9 h-9 rounded-xl bg-linear-to-tr from-blue-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-md shadow-indigo-500/25">
             <Bot className="w-5 h-5 text-white" />
           </div>
-          <span className="text-base md:text-lg font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-slate-400 hidden sm:inline-block">
+          <span className="text-base md:text-lg font-bold tracking-tight bg-clip-text text-transparent bg-linear-to-tr from-white via-slate-100 to-slate-400 hidden sm:inline-block">
             AI Chatbot
           </span>
         </div>

@@ -115,7 +115,7 @@ export default function ChatContainer({
           /* Empty State & Starter Prompts */
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-center my-auto space-y-8 px-2">
             <div className="flex flex-col items-center space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 border border-indigo-400/30 animate-pulse">
+              <div className="w-14 h-14 rounded-2xl bg-linear-to-tr from-indigo-600 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 border border-indigo-400/30 animate-pulse">
                 <Sparkles className="w-7 h-7 text-white" />
               </div>
               <div className="space-y-1.5 max-w-md">
@@ -161,7 +161,7 @@ export default function ChatContainer({
                 }`}
               >
                 {!isUser && (
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-1 shadow-xs shadow-indigo-500/20">
+                  <div className="w-8 h-8 rounded-xl bg-linear-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-1 shadow-xs shadow-indigo-500/20">
                     <Bot className="w-4 h-4" />
                   </div>
                 )}
@@ -180,7 +180,7 @@ export default function ChatContainer({
                           return (
                             <div
                               key={idx}
-                              className="whitespace-pre-wrap leading-relaxed break-words"
+                              className="whitespace-pre-wrap leading-relaxed wrap-break-word"
                             >
                               {part.content}
                             </div>
@@ -189,7 +189,7 @@ export default function ChatContainer({
                         return null;
                       })
                     ) : (
-                      <div className="whitespace-pre-wrap leading-relaxed break-words">
+                      <div className="whitespace-pre-wrap leading-relaxed wrap-break-word">
                         {fullContent}
                       </div>
                     )}
