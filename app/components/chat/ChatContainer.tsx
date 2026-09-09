@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useChat, fetchServerSentEvents } from "@tanstack/ai-react";
 import { ChatSession } from "@/lib/types";
+import { saveMessage } from "@/lib/chat-storage";
 
 interface ChatContainerProps {
   session: ChatSession;
@@ -49,12 +50,20 @@ export default function ChatContainer({
   const [input, setInput] = useState("");
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const isFirstMessageRef = useRef<boolean>(session.messages.length === 0);
+  const isFirstMessageRef = useRef<boolean>(
+    !session.messages || session.messages.length === 0,
+  );
 
   const { messages, sendMessage, isLoading, stop, error } = useChat({
     connection: fetchServerSentEvents("/api/chat"),
     threadId: session.id,
     initialMessages: session.messages || [],
+    onFinish: async (message) => {
+      const content = getMessageContent(message);
+      if (content) {
+        await saveMessage(session.id, "assistant", content);
+      }
+    },
   });
 
   const scrollToBottom = () => {
@@ -82,6 +91,10 @@ export default function ChatContainer({
     }
 
     setInput("");
+
+    // Persist user prompt to PostgreSQL database
+    saveMessage(session.id, "user", trimmed);
+
     await sendMessage(trimmed);
   };
 

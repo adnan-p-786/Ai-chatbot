@@ -15,9 +15,10 @@ export interface ChatMessage {
 export interface ChatSession {
   id: string;
   title: string;
-  createdAt: number;
-  updatedAt: number;
-  messages: any[];
+  createdAt: number | string | Date;
+  updatedAt: number | string | Date;
+  messages?: any[];
+  _messagesLoaded?: boolean;
 }
 
 export interface DateGroupedSessions {

@@ -7,13 +7,13 @@ import ChatContainer from "./components/chat/ChatContainer";
 import { ChatSession } from "@/lib/types";
 import {
   getStoredSessions,
-  saveStoredSessions,
   getActiveSessionId,
   setActiveSessionId,
   createNewSession,
-  deleteSessionFromStorage,
-  updateSessionInStorage,
-  clearAllSessionsFromStorage,
+  deleteSession,
+  updateSessionTitle,
+  clearAllSessions,
+  getSessionMessages,
 } from "@/lib/chat-storage";
 
 export default function Home() {
@@ -25,91 +25,172 @@ export default function Home() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize sessions from localStorage on client mount
+  // Initialize sessions from database on client mount
   useEffect(() => {
-    const loadedSessions = getStoredSessions();
-    const storedActiveId = getActiveSessionId();
+    let isMounted = true;
 
-    if (loadedSessions.length > 0) {
-      setSessions(loadedSessions);
-      const matched = loadedSessions.find((s) => s.id === storedActiveId);
-      const activeId = matched ? matched.id : loadedSessions[0].id;
-      setActiveSessionIdState(activeId);
-      setActiveSessionId(activeId);
-    } else {
-      // First time visit: create a default session
-      const defaultSession = createNewSession("New Chat");
-      setSessions([defaultSession]);
-      setActiveSessionIdState(defaultSession.id);
-      saveStoredSessions([defaultSession]);
-      setActiveSessionId(defaultSession.id);
+    async function init() {
+      try {
+        const loadedSessions = await getStoredSessions();
+        const storedActiveId = getActiveSessionId();
+
+        if (!isMounted) return;
+
+        if (loadedSessions.length > 0) {
+          setSessions(loadedSessions);
+          const matched = loadedSessions.find((s) => s.id === storedActiveId);
+          const activeId = matched ? matched.id : loadedSessions[0].id;
+          setActiveSessionIdState(activeId);
+          setActiveSessionId(activeId);
+        } else {
+          // First time visit or empty DB: create a default session
+          const defaultSession = await createNewSession("New Chat");
+          if (!isMounted) return;
+          const defaultWithFlag: ChatSession = {
+            ...defaultSession,
+            messages: [],
+            _messagesLoaded: true,
+          };
+          setSessions([defaultWithFlag]);
+          setActiveSessionIdState(defaultWithFlag.id);
+          setActiveSessionId(defaultWithFlag.id);
+        }
+      } catch (error) {
+        console.error("Failed to initialize sessions from API:", error);
+      } finally {
+        if (isMounted) {
+          setIsInitialized(true);
+        }
+      }
     }
-    setIsInitialized(true);
+
+    init();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const activeSession = useMemo(() => {
     return sessions.find((s) => s.id === activeSessionId) || null;
   }, [sessions, activeSessionId]);
 
+  // Fetch messages for the active session when it hasn't been loaded yet
+  useEffect(() => {
+    if (!activeSessionId) return;
+
+    const currSession = sessions.find((s) => s.id === activeSessionId);
+    if (!currSession || currSession._messagesLoaded) return;
+
+    let isCancelled = false;
+
+    getSessionMessages(activeSessionId)
+      .then((msgs) => {
+        if (isCancelled) return;
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === activeSessionId
+              ? { ...s, messages: msgs, _messagesLoaded: true }
+              : s,
+          ),
+        );
+      })
+      .catch((err) => {
+        console.error("Failed to load messages for session:", err);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeSessionId, sessions]);
+
   const handleSelectSession = useCallback((id: string) => {
     setActiveSessionIdState(id);
     setActiveSessionId(id);
   }, []);
 
-  const handleNewChat = useCallback(() => {
+  const handleNewChat = useCallback(async () => {
     // If current session is already completely empty and titled "New Chat", reuse it
     if (
       activeSession &&
       activeSession.title === "New Chat" &&
-      activeSession.messages.length === 0
+      (!activeSession.messages || activeSession.messages.length === 0)
     ) {
       return;
     }
 
-    const newSession = createNewSession("New Chat");
-    setSessions((prev) => {
-      const updated = [newSession, ...prev];
-      saveStoredSessions(updated);
-      return updated;
-    });
-    setActiveSessionIdState(newSession.id);
-    setActiveSessionId(newSession.id);
+    try {
+      const newSession = await createNewSession("New Chat");
+      const sessionWithFlag: ChatSession = {
+        ...newSession,
+        messages: [],
+        _messagesLoaded: true,
+      };
+
+      setSessions((prev) => [sessionWithFlag, ...prev]);
+      setActiveSessionIdState(newSession.id);
+      setActiveSessionId(newSession.id);
+    } catch (error) {
+      console.error("Failed to create new chat session:", error);
+    }
   }, [activeSession]);
 
   const handleDeleteSession = useCallback(
-    (id: string) => {
-      const updated = deleteSessionFromStorage(id);
-      setSessions(updated);
+    async (id: string) => {
+      const remaining = sessions.filter((s) => s.id !== id);
+      setSessions(remaining);
 
       if (id === activeSessionId) {
-        if (updated.length > 0) {
-          setActiveSessionIdState(updated[0].id);
-          setActiveSessionId(updated[0].id);
+        if (remaining.length > 0) {
+          setActiveSessionIdState(remaining[0].id);
+          setActiveSessionId(remaining[0].id);
         } else {
-          // If all chats deleted, create a fresh empty one
-          const fresh = createNewSession("New Chat");
-          setSessions([fresh]);
-          setActiveSessionIdState(fresh.id);
-          saveStoredSessions([fresh]);
-          setActiveSessionId(fresh.id);
+          try {
+            const fresh = await createNewSession("New Chat");
+            const freshWithFlag: ChatSession = {
+              ...fresh,
+              messages: [],
+              _messagesLoaded: true,
+            };
+            setSessions([freshWithFlag]);
+            setActiveSessionIdState(fresh.id);
+            setActiveSessionId(fresh.id);
+          } catch (error) {
+            console.error("Failed to create default session:", error);
+          }
         }
       }
+
+      await deleteSession(id);
     },
-    [activeSessionId],
+    [activeSessionId, sessions],
   );
 
-  const handleRenameSession = useCallback((id: string, newTitle: string) => {
-    const updated = updateSessionInStorage(id, { title: newTitle });
-    setSessions(updated);
-  }, []);
+  const handleRenameSession = useCallback(
+    async (id: string, newTitle: string) => {
+      setSessions((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, title: newTitle } : s)),
+      );
+      await updateSessionTitle(id, newTitle);
+    },
+    [],
+  );
 
-  const handleClearAllSessions = useCallback(() => {
-    clearAllSessionsFromStorage();
-    const fresh = createNewSession("New Chat");
-    setSessions([fresh]);
-    setActiveSessionIdState(fresh.id);
-    saveStoredSessions([fresh]);
-    setActiveSessionId(fresh.id);
+  const handleClearAllSessions = useCallback(async () => {
+    try {
+      await clearAllSessions();
+      const fresh = await createNewSession("New Chat");
+      const freshWithFlag: ChatSession = {
+        ...fresh,
+        messages: [],
+        _messagesLoaded: true,
+      };
+      setSessions([freshWithFlag]);
+      setActiveSessionIdState(fresh.id);
+      setActiveSessionId(fresh.id);
+    } catch (error) {
+      console.error("Failed to clear all sessions:", error);
+    }
   }, []);
 
   const handleUpdateMessages = useCallback(
@@ -123,9 +204,8 @@ export default function Home() {
         updated[index] = {
           ...updated[index],
           messages,
-          updatedAt: Date.now(),
+          updatedAt: new Date(),
         };
-        saveStoredSessions(updated);
         return updated;
       });
     },
@@ -133,26 +213,22 @@ export default function Home() {
   );
 
   const handleFirstUserMessage = useCallback(
-    (sessionId: string, promptText: string) => {
-      setSessions((prev) => {
-        const index = prev.findIndex((s) => s.id === sessionId);
-        if (index === -1) return prev;
+    async (sessionId: string, promptText: string) => {
+      const cleanPrompt = promptText.replace(/\s+/g, " ").trim();
+      const smartTitle =
+        cleanPrompt.length > 35
+          ? cleanPrompt.substring(0, 35) + "..."
+          : cleanPrompt;
 
-        const cleanPrompt = promptText.replace(/\s+/g, " ").trim();
-        const smartTitle =
-          cleanPrompt.length > 35
-            ? cleanPrompt.substring(0, 35) + "..."
-            : cleanPrompt;
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId
+            ? { ...s, title: smartTitle, updatedAt: new Date() }
+            : s,
+        ),
+      );
 
-        const updated = [...prev];
-        updated[index] = {
-          ...updated[index],
-          title: smartTitle,
-          updatedAt: Date.now(),
-        };
-        saveStoredSessions(updated);
-        return updated;
-      });
+      await updateSessionTitle(sessionId, smartTitle);
     },
     [],
   );
@@ -188,7 +264,7 @@ export default function Home() {
 
         {/* Chat Messages Workspace */}
         <main className="flex-1 flex flex-col min-w-0 bg-slate-950 overflow-hidden relative">
-          {!isInitialized || !activeSession ? (
+          {!isInitialized || !activeSession || !activeSession._messagesLoaded ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="flex flex-col items-center gap-3">
                 <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
